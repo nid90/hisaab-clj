@@ -3,7 +3,7 @@
             [clojure.java.io :as io]
             [clojure.string :as s]))
 
-(def debit-filter-keywords ["CLEARING" "LIC" "NEW FD"])
+(def debit-filter-keywords ["CLEARING" "LIC" "NEW FD", "CBDT"])
 (def credit-filter-keywords ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO"])
 
 (defn read-file-and-parse [file-name]
@@ -30,10 +30,12 @@
 
 (defn get-total-expenditure [file-name]
   (let [[header & actual-rows] (read-file-and-parse file-name)
-        row-minus-bad-row      (remove #(boolean (re-find #"DOVES" (s/join %))) actual-rows)
-        bad-row                (first (filter #(boolean (re-find #"DOVES" (s/join %))) actual-rows))
-        fixed-bad-row          (remove-nth-element-from-vec (vec bad-row) 2)
-        row-maps               (map #(zipmap header %) (conj row-minus-bad-row fixed-bad-row))
+        row-minus-bad-row      (remove #(>= (count %) 8) actual-rows)
+        bad-row                (first (filter #(>= (count %) 8) actual-rows))
+        fixed-bad-row          (when bad-row (remove-nth-element-from-vec (vec bad-row) 2))
+        row-maps               (map #(zipmap header %) (if fixed-bad-row
+                                                         (conj row-minus-bad-row fixed-bad-row)
+                                                         row-minus-bad-row))
         withdrawals            (remove-keyword-rows row-maps debit-filter-keywords)
         deposits               (remove-keyword-rows row-maps credit-filter-keywords)]
     (format "%.2f"
