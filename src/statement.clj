@@ -4,7 +4,7 @@
             [clojure.string :as s]))
 
 (def debit-filter-keywords ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"])
-(def credit-filter-keywords ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCPG5295B", "AUTO_REDE"])
+(def credit-filter-keywords ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCP", "AUTO_REDE"])
 
 (defn read-file-and-parse [file-name]
   (->>  (with-open [reader (io/reader file-name)]
