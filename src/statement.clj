@@ -3,8 +3,8 @@
             [clojure.java.io :as io]
             [clojure.string :as s]))
 
-(def debit-filter-keywords ["CLEARING" "LIC" "NEW FD", "CBDT"])
-(def credit-filter-keywords ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO"])
+(def debit-filter-keywords ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"])
+(def credit-filter-keywords ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCPG5295B", "AUTO_REDE"])
 
 (defn read-file-and-parse [file-name]
   (->>  (with-open [reader (io/reader file-name)]
