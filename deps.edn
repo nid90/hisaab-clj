@@ -1,3 +1,4 @@
 {:deps
  {pdfboxing          {:mvn/version "0.1.14"}
-  clojurewerkz/money {:mvn/version "1.10.0"}}}
+  clojurewerkz/money {:mvn/version "1.10.0"}
+  org.clojure/data.csv {:mvn/version "1.0.1"}}}
