@@ -3,41 +3,100 @@
             [clojure.java.io :as io]
             [clojure.string :as s]))
 
-(def debit-filter-keywords ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"])
-(def credit-filter-keywords ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCP", "AUTO_REDE"])
+(def narration-key "Narration")
+(def debit-amount-key "Debit Amount")
+(def credit-amount-key "Credit Amount")
+(def closing-balance-key "Closing Balance")
+(def debit-filters (map re-pattern ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"]))
+(def credit-filters (map re-pattern ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCPG5295B", "AUTO_REDE"]))
+(def f "/Users/kitallis/Code/scripts/hisaab/april.txt")
 
-(defn read-file-and-parse [file-name]
-  (->>  (with-open [reader (io/reader file-name)]
-          (doall (csv/read-csv reader)))
-        (rest)
-        (map #(map s/trim %))))
+(defn fetch! [f]
+  (with-open [rd (io/reader (io/file f))]
+    (->> (doall (csv/read-csv rd))
+         (rest)
+         (map #(map s/trim %)))))
 
-(defn remove-keyword-rows [row-maps keywords]
-  (remove #(some true?
-                 (map (fn [kw]
-                        (boolean
-                         (re-find (re-pattern kw)
-                                  (get % "Narration"))))
-                      keywords))
-          row-maps))
+(defn header->row [[header & value-rows]]
+  (map #(zipmap header %) value-rows))
 
-(defn remove-nth-element-from-vec [coll i]
-  (concat (subvec coll 0 i)
-          (subvec coll (inc i))))
+(defn numeralize [row-maps]
+  (letfn [(parse-float [s] (Float/parseFloat s))]
+    (map
+     #(-> %
+          (update debit-amount-key parse-float)
+          (update credit-amount-key parse-float)
+          (update closing-balance-key parse-float))
+     row-maps)))
 
-(defn get-total-amount [rows column]
-  (apply + (map (fn [r] (Float/parseFloat (get r column))) rows)))
+(defn matches-narration? [row matcher]
+  (boolean (re-find matcher
+                    (get row narration-key))))
 
-(defn get-total-expenditure [file-name]
-  (let [[header & actual-rows] (read-file-and-parse file-name)
-        row-minus-bad-row      (remove #(>= (count %) 8) actual-rows)
-        bad-row                (first (filter #(>= (count %) 8) actual-rows))
-        fixed-bad-row          (when bad-row (remove-nth-element-from-vec (vec bad-row) 2))
-        row-maps               (map #(zipmap header %) (if fixed-bad-row
-                                                         (conj row-minus-bad-row fixed-bad-row)
-                                                         row-minus-bad-row))
-        withdrawals            (remove-keyword-rows row-maps debit-filter-keywords)
-        deposits               (remove-keyword-rows row-maps credit-filter-keywords)]
-    (format "%.2f"
-            (- (get-total-amount withdrawals "Debit Amount")
-               (get-total-amount deposits "Credit Amount")))))
+(defn matching-narrations [row matchers]
+  (map (partial matches-narration? row) matchers))
+
+(defn reject-narrations [row-maps matchers]
+  (remove #(some true? (matching-narrations % matchers)) row-maps))
+
+(defn filter-debits [row-maps]
+  (reject-narrations row-maps debit-filters))
+
+(defn filter-credits [row-maps]
+  (reject-narrations row-maps credit-filters))
+
+(defn closing-balance [row-maps]
+  (last
+   (map #(get % closing-balance-key)
+        row-maps)))
+
+(defn total-amount [row-maps column]
+  (reduce +
+          0.00
+          (map #(get % column) row-maps)))
+
+(defn total-debit-amount [row-maps]
+  (total-amount row-maps debit-amount-key))
+
+(defn total-credit-amount [row-maps]
+  (total-amount row-maps credit-amount-key))
+
+(defn gen-statement [row-maps]
+  (let [withdrawls (total-debit-amount row-maps)
+        deposits (total-credit-amount row-maps)
+        expenditure (- withdrawls deposits)
+        closing-balance (closing-balance row-maps)]
+    {:withdrawls withdrawls
+     :deposits deposits
+     :expenditure expenditure
+     :closing-balance closing-balance}))
+
+(defn pretty-print! [statement]
+  (letfn [(titleize [s] (-> s
+                            (name)
+                            (s/replace #"-" " ")
+                            (s/split #"\b")
+                            (as-> words (map s/capitalize words))
+                            (s/join)))]
+    (let [point "→ "
+          value-formatter ": %.2f"
+          nl "\n"
+          keys (keys statement)
+          vals (vals statement)
+          titles (map titleize keys)
+          formatted-titles (map #(str point % value-formatter nl) titles)
+          left-hand-side (s/join formatted-titles)]
+      (->> vals
+           (cons left-hand-side)
+           (apply format)
+           (println)))))
+
+(defn process [file]
+  (-> file
+      fetch!
+      header->row
+      numeralize
+      filter-debits
+      filter-credits
+      gen-statement
+      pretty-print!))
