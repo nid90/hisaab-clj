@@ -9,7 +9,6 @@
 (def closing-balance-key "Closing Balance")
 (def debit-filters (map re-pattern ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"]))
 (def credit-filters (map re-pattern ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCPG5295B", "AUTO_REDE"]))
-(def f "/Users/kitallis/Code/scripts/hisaab/april.txt")
 
 (defn fetch! [f]
   (with-open [rd (io/reader (io/file f))]
@@ -100,3 +99,7 @@
       filter-credits
       gen-statement
       pretty-print!))
+
+(comment
+  (def f "/Users/kitallis/Code/scripts/hisaab/april.txt")
+  (process f))
