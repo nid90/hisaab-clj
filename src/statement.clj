@@ -7,8 +7,8 @@
 (def debit-amount-key "Debit Amount")
 (def credit-amount-key "Credit Amount")
 (def closing-balance-key "Closing Balance")
-(def debit-filters (map re-pattern ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"]))
-(def credit-filters (map re-pattern ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCPG5295B", "AUTO_REDE"]))
+(def debit-filters ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"])
+(def credit-filters ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCPG5295B", "AUTO_REDE"])
 
 (defn fetch! [f]
   (with-open [rd (io/reader (io/file f))]
@@ -29,7 +29,7 @@
      row-maps)))
 
 (defn matches-narration? [row matcher]
-  (boolean (re-find matcher
+  (boolean (re-find (re-pattern matcher)
                     (get row narration-key))))
 
 (defn matching-narrations [row matchers]
