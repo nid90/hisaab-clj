@@ -17,7 +17,17 @@
          (rest)
          (map #(map s/trim %)))))
 
-(defn assoc-at [coll e at]
+(defn assoc-at
+  "For a given vector,
+  Cram an element at the specified position
+  and push the rest ahead
+
+  eg.,
+
+  (assoc-at [1 3 4 5] 2 1)
+  => [1 2 3 4 5]
+  "
+  [coll e at]
   (concat
    (conj (subvec coll 0 at) e)
    (subvec coll at)))
