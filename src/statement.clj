@@ -9,12 +9,37 @@
 (def closing-balance-key "Closing Balance")
 (def debit-filters ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"])
 (def credit-filters ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCPG5295B", "AUTO_REDE"])
+(def narration-idx 1)
 
 (defn fetch! [f]
   (with-open [rd (io/reader (io/file f))]
     (->> (doall (csv/read-csv rd))
          (rest)
          (map #(map s/trim %)))))
+
+(defn assoc-at [coll e at]
+  (concat
+   (conj (subvec coll 0 at) e)
+   (subvec coll at)))
+
+(defn recombine-narration [header-count row]
+  (let [column-count (count row)
+        row-vec (vec row)
+        diff (- column-count header-count)
+        overflow? (pos? diff)]
+    (if overflow?
+      (let [narration (subvec row-vec narration-idx (+ 1 narration-idx diff))
+            recomb-narration (s/join narration)]
+        (-> (set narration)
+            (remove row)
+            (vec)
+            (assoc-at recomb-narration narration-idx)))
+      row-vec)))
+
+(defn adjust-narrations [[header & value-rows]]
+  (->> value-rows
+       (map (partial recombine-narration (count header)))
+       (concat [header])))
 
 (defn header->row [[header & value-rows]]
   (map #(zipmap header %) value-rows))
@@ -93,6 +118,7 @@
 (defn process [file]
   (-> file
       fetch!
+      adjust-narrations
       header->row
       numeralize
       filter-debits
