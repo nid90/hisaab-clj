@@ -1,19 +1,20 @@
 (ns statement
-  (:require [sundry :as e]))
+  (:require [sundry :as e]
+            [clojure.string :as s]))
 
 (def narration-key "Narration")
 (def debit-amount-key "Debit Amount")
 (def credit-amount-key "Credit Amount")
 (def closing-balance-key "Closing Balance")
 (def debit-filters ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"])
-(def credit-filters ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCPG5295B", "AUTO_REDE"])
+(def credit-filters ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCP", "AUTO_REDE"])
 (def narration-idx 1)
 
 (defn fetch! [f]
-  (-> f
-      (e/read-csv)
-      (rest)
-      (map #(map s/trim %))))
+  (->> f
+       (e/read-csv)
+       (rest)
+       (map #(map s/trim %))))
 
 (defn recombine-narration [header-count row]
   (let [column-count (count row)
