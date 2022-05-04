@@ -1,7 +1,5 @@
 (ns statement
-  (:require [clojure.data.csv :as csv]
-            [clojure.java.io :as io]
-            [clojure.string :as s]))
+  (:require [sundry :as e]))
 
 (def narration-key "Narration")
 (def debit-amount-key "Debit Amount")
@@ -12,23 +10,10 @@
 (def narration-idx 1)
 
 (defn fetch! [f]
-  (with-open [rd (io/reader (io/file f))]
-    (->> (doall (csv/read-csv rd))
-         (rest)
-         (map #(map s/trim %)))))
-
-(defn cram-at
-  "For a given vector,
-   Cram an element at the specified position
-   and push the rest ahead.
-
-   eg.,
-   => (cram-at [1 3 4 5] 2 1)
-   => [1 2 3 4 5]"
-  [coll e at]
-  (concat
-   (conj (subvec coll 0 at) e)
-   (subvec coll at)))
+  (-> f
+      (e/read-csv)
+      (rest)
+      (map #(map s/trim %))))
 
 (defn recombine-narration [header-count row]
   (let [column-count (count row)
@@ -38,10 +23,9 @@
     (if overflow?
       (let [narration (subvec row-vec narration-idx (+ 1 narration-idx diff))
             narration-str (s/join narration)]
-        (-> (set narration)
-            (remove row)
-            (vec)
-            (cram-at narration-str narration-idx)))
+        (-> row
+            (e/rem-subvec narration)
+            (e/cram-at narration-str narration-idx)))
       row-vec)))
 
 (defn adjust-narrations [[header & value-rows]]
@@ -104,24 +88,18 @@
      :closing-balance closing-balance}))
 
 (defn pretty-print! [statement]
-  (letfn [(titleize [s] (-> s
-                            (name)
-                            (s/replace #"-" " ")
-                            (s/split #"\b")
-                            (as-> words (map s/capitalize words))
-                            (s/join)))]
-    (let [point "→ "
-          value-formatter ": %.2f"
-          nl "\n"
-          keys (keys statement)
-          vals (vals statement)
-          titles (map titleize keys)
-          formatted-titles (map #(str point % value-formatter nl) titles)
-          left-hand-side (s/join formatted-titles)]
-      (->> vals
-           (cons left-hand-side)
-           (apply format)
-           (println)))))
+  (let [point "→ "
+        value-formatter ": %.2f"
+        nl "\n"
+        keys (keys statement)
+        vals (vals statement)
+        titles (map e/titleize keys)
+        formatted-titles (map #(str point % value-formatter nl) titles)
+        left-hand-side (s/join formatted-titles)]
+    (->> vals
+         (cons left-hand-side)
+         (apply format)
+         (println))))
 
 (defn process [file]
   (-> file
