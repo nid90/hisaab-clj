@@ -2,10 +2,15 @@
   (:require [sundry :as e]
             [clojure.string :as s]))
 
-(def narration-key "Narration")
-(def debit-amount-key "Debit Amount")
-(def credit-amount-key "Credit Amount")
-(def closing-balance-key "Closing Balance")
+(def header-keys
+  {"Date" :date
+   "Narration" :narration
+   "Value Dat" :value-date
+   "Debit Amount" :debit-amount
+   "Credit Amount" :credit-amount
+   "Chq/Ref Number" :ref-number
+   "Closing Balance" :closing-balance})
+
 (def debit-filters ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"])
 (def credit-filters ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCP", "AUTO_REDE"])
 (def narration-idx 1)
@@ -35,20 +40,21 @@
        (concat [header])))
 
 (defn header->row [[header & value-rows]]
-  (map #(zipmap header %) value-rows))
+  (let [header-keywords (map #(get header-keys %) header)]
+    (map #(zipmap header-keywords  %) value-rows)))
 
 (defn numeralize [row-maps]
   (letfn [(parse-float [s] (Float/parseFloat s))]
     (map
      #(-> %
-          (update debit-amount-key parse-float)
-          (update credit-amount-key parse-float)
-          (update closing-balance-key parse-float))
+          (update :debit-amount parse-float)
+          (update :credit-amount parse-float)
+          (update :closing-balance parse-float))
      row-maps)))
 
 (defn matches-narration? [row matcher]
   (boolean (re-find (re-pattern matcher)
-                    (get row narration-key))))
+                    (get row :narration))))
 
 (defn matching-narrations [row matchers]
   (map (partial matches-narration? row) matchers))
@@ -64,7 +70,7 @@
 
 (defn closing-balance [row-maps]
   (last
-   (map #(get % closing-balance-key)
+   (map #(get % :closing-balance)
         row-maps)))
 
 (defn total-amount [row-maps column]
@@ -73,10 +79,10 @@
           (map #(get % column) row-maps)))
 
 (defn total-debit-amount [row-maps]
-  (total-amount row-maps debit-amount-key))
+  (total-amount row-maps :debit-amount))
 
 (defn total-credit-amount [row-maps]
-  (total-amount row-maps credit-amount-key))
+  (total-amount row-maps :credit-amount))
 
 (defn gen-statement [row-maps]
   (let [withdrawls (total-debit-amount row-maps)
