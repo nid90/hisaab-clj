@@ -1,43 +1,126 @@
 (ns statement
-  (:require [clojure.data.csv :as csv]
-            [clojure.java.io :as io]
+  (:require [sundry :as e]
             [clojure.string :as s]))
 
-(def debit-filter-keywords ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"])
-(def credit-filter-keywords ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCP", "AUTO_REDE"])
+(def narration-key "Narration")
+(def debit-amount-key "Debit Amount")
+(def credit-amount-key "Credit Amount")
+(def closing-balance-key "Closing Balance")
+(def debit-filters ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"])
+(def credit-filters ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCP", "AUTO_REDE"])
+(def narration-idx 1)
 
-(defn read-file-and-parse [file-name]
-  (->>  (with-open [reader (io/reader file-name)]
-          (doall (csv/read-csv reader)))
-        (rest)
-        (map #(map s/trim %))))
+(defn fetch! [f]
+  (->> f
+       (e/read-csv)
+       (rest)
+       (map #(map s/trim %))))
 
-(defn remove-keyword-rows [row-maps keywords]
-  (remove #(some true?
-                 (map (fn [kw]
-                        (boolean
-                         (re-find (re-pattern kw)
-                                  (get % "Narration"))))
-                      keywords))
-          row-maps))
+(defn recombine-narration [header-count row]
+  (let [column-count (count row)
+        row-vec (vec row)
+        diff (- column-count header-count)
+        overflow? (pos? diff)]
+    (if overflow?
+      (let [narration (subvec row-vec narration-idx (+ 1 narration-idx diff))
+            narration-str (s/join narration)]
+        (-> row
+            (e/rem-subvec narration)
+            (e/cram-at narration-str narration-idx)))
+      row-vec)))
 
-(defn remove-nth-element-from-vec [coll i]
-  (concat (subvec coll 0 i)
-          (subvec coll (inc i))))
+(defn adjust-narrations [[header & value-rows]]
+  (->> value-rows
+       (map (partial recombine-narration (count header)))
+       (concat [header])))
 
-(defn get-total-amount [rows column]
-  (apply + (map (fn [r] (Float/parseFloat (get r column))) rows)))
+(defn header->row [[header & value-rows]]
+  (map #(zipmap header %) value-rows))
 
-(defn get-total-expenditure [file-name]
-  (let [[header & actual-rows] (read-file-and-parse file-name)
-        row-minus-bad-row      (remove #(>= (count %) 8) actual-rows)
-        bad-row                (first (filter #(>= (count %) 8) actual-rows))
-        fixed-bad-row          (when bad-row (remove-nth-element-from-vec (vec bad-row) 2))
-        row-maps               (map #(zipmap header %) (if fixed-bad-row
-                                                         (conj row-minus-bad-row fixed-bad-row)
-                                                         row-minus-bad-row))
-        withdrawals            (remove-keyword-rows row-maps debit-filter-keywords)
-        deposits               (remove-keyword-rows row-maps credit-filter-keywords)]
-    (format "%.2f"
-            (- (get-total-amount withdrawals "Debit Amount")
-               (get-total-amount deposits "Credit Amount")))))
+(defn numeralize [row-maps]
+  (letfn [(parse-float [s] (Float/parseFloat s))]
+    (map
+     #(-> %
+          (update debit-amount-key parse-float)
+          (update credit-amount-key parse-float)
+          (update closing-balance-key parse-float))
+     row-maps)))
+
+(defn matches-narration? [row matcher]
+  (boolean (re-find (re-pattern matcher)
+                    (get row narration-key))))
+
+(defn matching-narrations [row matchers]
+  (map (partial matches-narration? row) matchers))
+
+(defn reject-narrations [row-maps matchers]
+  (remove #(some true? (matching-narrations % matchers)) row-maps))
+
+(defn filter-debits [row-maps]
+  (reject-narrations row-maps debit-filters))
+
+(defn filter-credits [row-maps]
+  (reject-narrations row-maps credit-filters))
+
+(defn closing-balance [row-maps]
+  (last
+   (map #(get % closing-balance-key)
+        row-maps)))
+
+(defn total-amount [row-maps column]
+  (reduce +
+          0.00
+          (map #(get % column) row-maps)))
+
+(defn total-debit-amount [row-maps]
+  (total-amount row-maps debit-amount-key))
+
+(defn total-credit-amount [row-maps]
+  (total-amount row-maps credit-amount-key))
+
+(defn gen-statement [row-maps]
+  (let [withdrawls (total-debit-amount row-maps)
+        deposits (total-credit-amount row-maps)
+        expenditure (- withdrawls deposits)
+        closing-balance (closing-balance row-maps)]
+    {:withdrawls withdrawls
+     :deposits deposits
+     :expenditure expenditure
+     :closing-balance closing-balance}))
+
+(defn pretty-print! [statement]
+  (let [point "→ "
+        value-formatter ": %.2f"
+        nl "\n"
+        keys (keys statement)
+        vals (vals statement)
+        titles (map e/titleize keys)
+        formatted-titles (map #(str point % value-formatter nl) titles)
+        left-hand-side (s/join formatted-titles)]
+    (->> vals
+         (cons left-hand-side)
+         (apply format)
+         (println))))
+
+(defn process [file]
+  (-> file
+      fetch!
+      adjust-narrations
+      header->row
+      numeralize
+      filter-debits
+      filter-credits
+      gen-statement
+      pretty-print!))
+
+(comment
+  (def f "/Users/kitallis/Code/scripts/hisaab/april.txt")
+  (process f)
+
+  ;; Group narrations by filters
+
+  (def filters {:food-bev ["DUNZO" "BLUETOKAI"] :investments ["MF"]})
+  (defn filter-narrations [row-maps matchers]
+    (filter #(some true? (matching-narrations % matchers)) row-maps))
+  (def data (-> f fetch! adjust-narrations header->row numeralize))
+  (reduce-kv (fn [m k v] (assoc m k (filter-narrations data v))) {} filters))
