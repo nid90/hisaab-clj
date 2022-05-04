@@ -17,16 +17,14 @@
          (rest)
          (map #(map s/trim %)))))
 
-(defn assoc-at
+(defn cram-at
   "For a given vector,
-  Cram an element at the specified position
-  and push the rest ahead
+   Cram an element at the specified position
+   and push the rest ahead.
 
-  eg.,
-
-  (assoc-at [1 3 4 5] 2 1)
-  => [1 2 3 4 5]
-  "
+   eg.,
+   => (cram-at [1 3 4 5] 2 1)
+   => [1 2 3 4 5]"
   [coll e at]
   (concat
    (conj (subvec coll 0 at) e)
@@ -39,11 +37,11 @@
         overflow? (pos? diff)]
     (if overflow?
       (let [narration (subvec row-vec narration-idx (+ 1 narration-idx diff))
-            recomb-narration (s/join narration)]
+            narration-str (s/join narration)]
         (-> (set narration)
             (remove row)
             (vec)
-            (assoc-at recomb-narration narration-idx)))
+            (cram-at narration-str narration-idx)))
       row-vec)))
 
 (defn adjust-narrations [[header & value-rows]]
