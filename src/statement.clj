@@ -115,4 +115,12 @@
 
 (comment
   (def f "/Users/kitallis/Code/scripts/hisaab/april.txt")
-  (process f))
+  (process f)
+
+  ;; Group narrations by filters
+
+  (def filters {:food-bev ["DUNZO" "BLUETOKAI"] :investments ["MF"]})
+  (defn filter-narrations [row-maps matchers]
+    (filter #(some true? (matching-narrations % matchers)) row-maps))
+  (def data (-> f fetch! adjust-narrations header->row numeralize))
+  (reduce-kv (fn [m k v] (assoc m k (filter-narrations data v))) {} filters))
