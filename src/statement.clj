@@ -1,14 +1,17 @@
 (ns statement
   (:require [sundry :as e]
-            [clojure.string :as s]))
+            [clojure.pprint :as pp]
+            [clojure.string :as s]
+            [clojure.set :as cset]
+            [config :refer [tags]]))
 
 (def header-keys
-  {"Date" :date
-   "Narration" :narration
-   "Value Dat" :value-date
-   "Debit Amount" :debit-amount
-   "Credit Amount" :credit-amount
-   "Chq/Ref Number" :ref-number
+  {"Date"            :date
+   "Narration"       :narration
+   "Value Dat"       :value-date
+   "Debit Amount"    :debit-amount
+   "Credit Amount"   :credit-amount
+   "Chq/Ref Number"  :ref-number
    "Closing Balance" :closing-balance})
 
 (def debit-filters ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"])
@@ -44,12 +47,12 @@
     (map #(zipmap header-keywords  %) value-rows)))
 
 (defn numeralize [row-maps]
-  (letfn [(parse-float [s] (Float/parseFloat s))]
+  (letfn [(parse-float-and-round [s] (int (Float/parseFloat s)))]
     (map
      #(-> %
-          (update :debit-amount parse-float)
-          (update :credit-amount parse-float)
-          (update :closing-balance parse-float))
+          (update :debit-amount parse-float-and-round)
+          (update :credit-amount parse-float-and-round)
+          (update :closing-balance parse-float-and-round))
      row-maps)))
 
 (defn matches-narration? [row matcher]
@@ -108,25 +111,34 @@
          (apply format)
          (println))))
 
+(defn filter-narrations [row-maps matchers]
+  (filter #(some true? (matching-narrations % matchers)) row-maps))
+
+(defn group-data [data]
+  (let [grouped-data (reduce-kv (fn [m k v]
+                                  (assoc m k (filter-narrations data v)))
+                                {} tags)
+        ungrouped-data (cset/difference (set data)
+                                               (set (flatten (vals grouped-data))))]
+    (assoc grouped-data :untagged ungrouped-data)))
+
+(defn group-totals [grouped-data]
+  (reduce-kv (fn [m k v]
+               (assoc m k {:debit (apply + (map :debit-amount v))
+                           :credit (apply + (map :credit-amount v))}))
+       {} grouped-data))
+
 (defn process [file]
-  (-> file
-      fetch!
-      adjust-narrations
-      header->row
-      numeralize
-      filter-debits
-      filter-credits
-      gen-statement
-      pretty-print!))
-
-(comment
-  (def f "/Users/kitallis/Code/scripts/hisaab/april.txt")
-  (process f)
-
-  ;; Group narrations by filters
-
-  (def filters {:food-bev ["DUNZO" "BLUETOKAI"] :investments ["MF"]})
-  (defn filter-narrations [row-maps matchers]
-    (filter #(some true? (matching-narrations % matchers)) row-maps))
-  (def data (-> f fetch! adjust-narrations header->row numeralize))
-  (reduce-kv (fn [m k v] (assoc m k (filter-narrations data v))) {} filters))
+  (let [data           (-> file
+                           fetch!
+                           adjust-narrations
+                           header->row
+                           numeralize)
+        totals         (-> data
+                           filter-debits
+                           filter-credits
+                           gen-statement)
+        grouped-totals (-> data
+                           group-data
+                           group-totals)]
+    (pp/pprint {:totals totals :group-totals grouped-totals})))
