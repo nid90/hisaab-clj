@@ -5,9 +5,9 @@
 
 (def conf (atom {}))
 (def home-dir (System/getProperty "user.home"))
-(def default-file-name (.toString (io/file home-dir "hisaab.conf.toml")))
+(def file (.toString (io/file home-dir "hisaab.conf.toml")))
 
-(def ^:private default-conf
+(def ^:private defaults
   {:bank-statement
    {:tags
     {:transport     ["UBER" "OLA"]
@@ -23,12 +23,12 @@
     {:debit  ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"]
      :credit ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCP", "AUTO_REDE"]}}})
 
-(defn gen! []
-  (spit default-file-name (toml/write default-conf)))
+(defn put! []
+  (spit file (toml/write defaults)))
 
-(defn read! []
-  (if-let [data (e/nil-on-exceptions (-> default-file-name
+(defn get! []
+  (if-let [data (e/nil-on-exceptions (-> file
                                          slurp
                                          (toml/read :keywordize)))]
     (reset! conf data)
-    (reset! conf default-conf)))
+    (reset! conf defaults)))
