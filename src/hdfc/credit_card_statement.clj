@@ -1,14 +1,14 @@
-(ns credit-card-statement
+(ns hdfc.credit-card-statement
   (:require [clojure.pprint :as pp]
             [clojure.string :as s]
             [clojurewerkz.money.amounts :as ma]
             [clojurewerkz.money.currencies :as mc]
             [clojurewerkz.money.format :as mf]
             [pdfboxing.text :as text]
-            [config :refer [tags]]))
+            [config :refer [conf]]))
 
 (defn description->tag [description]
-  (let [selected-tag (->> tags
+  (let [selected-tag (->> (get-in @conf [:bank-statement :tags])
                           (filter (fn [[tag descs]]
                                     (some #(s/includes? description %) descs)))
                           ffirst)]

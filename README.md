@@ -4,7 +4,7 @@
 
 This is a clj script to parse and create reports from my cc pdf statements. So far.
 
-# How to use
+## How to use
 
 Download delimited bank statements from hdfc and generate reports from them using `process` function in `statement` namspace.
 
@@ -46,19 +46,22 @@ For credit card statements, go to the `credit-card-statement` namespace and use 
 ;; => nil
 ```
 
-CLI usage
+### CLI usage
 
 ```
-clj -m core bank <abosulte-file-path>
+clj -M -m core bank <abosulte-file-path>
 ```
 or
 ```
-clj -m core cc <abosulte-file-path>
+clj -M -m core cc <abosulte-file-path>
 ```
 
+to generate a sample config (that can be tweaked),
+```
+clj -M -m core confgen
+```
 
-
-# Future
+## Future
 
 - add reports for grouped and tagged expenditures
 - add a sqlite database that can be locally stored

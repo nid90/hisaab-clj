@@ -1,9 +1,10 @@
-(ns statement
+(ns hdfc.bank-statement
   (:require [sundry :as e]
             [clojure.pprint :as pp]
             [clojure.string :as s]
             [clojure.set :as cset]
-            [config :refer [tags]]))
+            [table.core :as t]
+            [config :refer [conf]]))
 
 (def header-keys
   {"Date"            :date
@@ -14,8 +15,6 @@
    "Chq/Ref Number"  :ref-number
    "Closing Balance" :closing-balance})
 
-(def debit-filters ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"])
-(def credit-filters ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCP", "AUTO_REDE"])
 (def narration-idx 1)
 
 (defn fetch! [f]
@@ -26,11 +25,11 @@
 
 (defn recombine-narration [header-count row]
   (let [column-count (count row)
-        row-vec (vec row)
-        diff (- column-count header-count)
-        overflow? (pos? diff)]
+        row-vec      (vec row)
+        diff         (- column-count header-count)
+        overflow?    (pos? diff)]
     (if overflow?
-      (let [narration (subvec row-vec narration-idx (+ 1 narration-idx diff))
+      (let [narration     (subvec row-vec narration-idx (+ 1 narration-idx diff))
             narration-str (s/join narration)]
         (-> row
             (e/rem-subvec narration)
@@ -47,13 +46,12 @@
     (map #(zipmap header-keywords  %) value-rows)))
 
 (defn numeralize [row-maps]
-  (letfn [(parse-float-and-round [s] (int (Float/parseFloat s)))]
-    (map
-     #(-> %
-          (update :debit-amount parse-float-and-round)
-          (update :credit-amount parse-float-and-round)
-          (update :closing-balance parse-float-and-round))
-     row-maps)))
+  (map
+   #(-> %
+        (update :debit-amount e/parse-rounded-float)
+        (update :credit-amount e/parse-rounded-float)
+        (update :closing-balance e/parse-rounded-float))
+   row-maps))
 
 (defn matches-narration? [row matcher]
   (boolean (re-find (re-pattern matcher)
@@ -65,11 +63,16 @@
 (defn reject-narrations [row-maps matchers]
   (remove #(some true? (matching-narrations % matchers)) row-maps))
 
+(defn filter-narrations [row-maps matchers]
+  (filter #(some true? (matching-narrations % matchers)) row-maps))
+
 (defn filter-debits [row-maps]
-  (reject-narrations row-maps debit-filters))
+  (reject-narrations row-maps
+                     (get-in @conf [:bank-statement :filters :debit])))
 
 (defn filter-credits [row-maps]
-  (reject-narrations row-maps credit-filters))
+  (reject-narrations row-maps
+                     (get-in @conf [:bank-statement :filters :credit])))
 
 (defn closing-balance [row-maps]
   (last
@@ -88,45 +91,30 @@
   (total-amount row-maps :credit-amount))
 
 (defn gen-statement [row-maps]
-  (let [withdrawls (total-debit-amount row-maps)
-        deposits (total-credit-amount row-maps)
-        expenditure (- withdrawls deposits)
+  (let [withdrawls      (total-debit-amount row-maps)
+        deposits        (total-credit-amount row-maps)
+        expenditure     (- withdrawls deposits)
         closing-balance (closing-balance row-maps)]
-    {:withdrawls withdrawls
-     :deposits deposits
-     :expenditure expenditure
+    {:withdrawls      withdrawls
+     :deposits        deposits
+     :expenditure     expenditure
      :closing-balance closing-balance}))
 
-(defn pretty-print! [statement]
-  (let [point "→ "
-        value-formatter ": %.2f"
-        nl "\n"
-        keys (keys statement)
-        vals (vals statement)
-        titles (map e/titleize keys)
-        formatted-titles (map #(str point % value-formatter nl) titles)
-        left-hand-side (s/join formatted-titles)]
-    (->> vals
-         (cons left-hand-side)
-         (apply format)
-         (println))))
-
-(defn filter-narrations [row-maps matchers]
-  (filter #(some true? (matching-narrations % matchers)) row-maps))
-
 (defn group-data [data]
-  (let [grouped-data (reduce-kv (fn [m k v]
-                                  (assoc m k (filter-narrations data v)))
-                                {} tags)
+  (let [tags           (get-in @conf [:bank-statement :tags])
+        grouped-data   (reduce-kv (fn [m k v] (assoc m k (filter-narrations data v)))
+                                  {}
+                                  tags)
         ungrouped-data (cset/difference (set data)
-                                               (set (flatten (vals grouped-data))))]
+                                        (set (flatten (vals grouped-data))))]
     (assoc grouped-data :untagged ungrouped-data)))
 
 (defn group-totals [grouped-data]
   (reduce-kv (fn [m k v]
-               (assoc m k {:debit (apply + (map :debit-amount v))
+               (assoc m k {:debit  (apply + (map :debit-amount v))
                            :credit (apply + (map :credit-amount v))}))
-       {} grouped-data))
+             {}
+             grouped-data))
 
 (defn process [file]
   (let [data           (-> file
