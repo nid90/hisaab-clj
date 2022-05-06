@@ -1,11 +1,10 @@
 (ns hdfc.credit-card-statement
-  (:require [clojure.pprint :as pp]
-            [clojure.string :as s]
+  (:require [clojure.string :as s]
             [clojurewerkz.money.amounts :as ma]
             [clojurewerkz.money.currencies :as mc]
             [clojurewerkz.money.format :as mf]
-            [pdfboxing.text :as text]
-            [config :refer [conf]]))
+            [config :refer [conf]]
+            [pdfboxing.text :as text]))
 
 (defn description->tag [description]
   (let [selected-tag (->> (get-in @conf [:bank-statement :tags])
@@ -29,15 +28,14 @@
      :description description
      :tag         (description->tag description)}))
 
-(defn print-report [credits debits]
-  (pp/pprint
-   {:total-credits   (mf/format (reduce ma/plus (map :amount credits)))
-    :total-debits    (mf/format (reduce ma/plus (map :amount debits)))
-    :debit-breakdown (->> (group-by :tag debits)
-                          (map (fn [[tag expenses]]
-                                 [tag (mf/format (reduce ma/plus
-                                                         (map :amount expenses)))]))
-                          (into {}))}))
+(defn gen-statement [credits debits]
+  {:total-credits   (mf/format (reduce ma/plus (map :amount credits)))
+   :total-debits    (mf/format (reduce ma/plus (map :amount debits)))
+   :debit-breakdown (->> (group-by :tag debits)
+                         (map (fn [[tag expenses]]
+                                [tag (mf/format (reduce ma/plus
+                                                        (map :amount expenses)))]))
+                         (into {}))})
 
 (defn process [filename]
   (let [file-content   (-> filename
@@ -54,4 +52,4 @@
          credits true} (group-by #(s/ends-with? % "Cr") value-rows)
         credit-maps    (map (partial row->map true) credits)
         debit-maps     (map (partial row->map false) debits)]
-    (print-report credit-maps debit-maps)))
+    (gen-statement credit-maps debit-maps)))

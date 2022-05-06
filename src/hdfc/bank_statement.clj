@@ -1,10 +1,9 @@
 (ns hdfc.bank-statement
-  (:require [sundry :as e]
-            [clojure.pprint :as pp]
+  (:require [clojure.set :as cset]
             [clojure.string :as s]
-            [clojure.set :as cset]
-            [table.core :as t]
-            [config :refer [conf]]))
+            [config :refer [conf]]
+            [sundry :as e]
+            [table.core :as t]))
 
 (def header-keys
   {"Date"            :date
@@ -36,7 +35,10 @@
             (e/cram-at narration-str narration-idx)))
       row-vec)))
 
-(defn adjust-narrations [[header & value-rows]]
+(defn adjust-narrations
+  "Narrations with commas break CSV parsing correctness.
+  This undoes that and puts a comma-less narration back in the right place."
+  [[header & value-rows]]
   (->> value-rows
        (map (partial recombine-narration (count header)))
        (concat [header])))
@@ -100,33 +102,38 @@
      :expenditure     expenditure
      :closing-balance closing-balance}))
 
-(defn group-data [data]
-  (let [tags           (get-in @conf [:bank-statement :tags])
-        grouped-data   (reduce-kv (fn [m k v] (assoc m k (filter-narrations data v)))
-                                  {}
-                                  tags)
-        ungrouped-data (cset/difference (set data)
-                                        (set (flatten (vals grouped-data))))]
-    (assoc grouped-data :untagged ungrouped-data)))
+(defn ungrouped-data [data grouped-data]
+  (cset/difference (set data)
+                   (set (flatten (vals grouped-data)))))
 
-(defn group-totals [grouped-data]
-  (reduce-kv (fn [m k v]
-               (assoc m k {:debit  (apply + (map :debit-amount v))
-                           :credit (apply + (map :credit-amount v))}))
+(defn grouped-data [data]
+  (reduce-kv (fn [m tag matchers] (assoc m tag (filter-narrations data matchers)))
+             {}
+             (get-in @conf [:bank-statement :tags])))
+
+(defn tagged-data [data]
+  (let [grouped-data (grouped-data data)]
+    (assoc grouped-data
+           :untagged (ungrouped-data data grouped-data))))
+
+(defn tagged-totals [grouped-data]
+  (reduce-kv (fn [m group row]
+               (assoc m group {:debit  (reduce + (map :debit-amount row))
+                               :credit (reduce + (map :credit-amount row))}))
              {}
              grouped-data))
 
 (defn process [file]
-  (let [data           (-> file
-                           fetch!
-                           adjust-narrations
-                           header->row
-                           numeralize)
-        totals         (-> data
-                           filter-debits
-                           filter-credits
-                           gen-statement)
-        grouped-totals (-> data
-                           group-data
-                           group-totals)]
-    (pp/pprint {:totals totals :group-totals grouped-totals})))
+  (let [data          (-> file
+                          fetch!
+                          adjust-narrations
+                          header->row
+                          numeralize)
+        totals        (-> data
+                          filter-debits
+                          filter-credits
+                          gen-statement)
+        tagged-totals (-> data
+                          tagged-data
+                          tagged-totals)]
+    {:totals totals :tagged-totals tagged-totals}))
