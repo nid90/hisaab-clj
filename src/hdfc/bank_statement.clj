@@ -106,10 +106,19 @@
   (cset/difference (set data)
                    (set (flatten (vals grouped-data)))))
 
-(defn grouped-data [data]
-  (reduce-kv (fn [m tag matchers] (assoc m tag (filter-narrations data matchers)))
-             {}
-             (get-in @conf [:bank-statement :tags])))
+(defn grouped-data
+  "Keeps a track of used rows to only group them against one category."
+  [initial-data]
+  (->> [:bank-statement :tags]
+       (get-in @conf)
+       (reduce-kv (fn [m tag matchers]
+                    (let [data         (:data m)
+                          matched-data (filter-narrations data matchers)]
+                      (-> m
+                          (assoc-in [:grouped-data tag] matched-data)
+                          (assoc :data (e/rem-subvec data matched-data)))))
+                  {:grouped-data {} :data initial-data})
+       (:grouped-data)))
 
 (defn tagged-data [data]
   (let [grouped-data (grouped-data data)]
