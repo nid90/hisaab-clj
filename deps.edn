@@ -2,5 +2,4 @@
  {pdfboxing/pdfboxing  {:mvn/version "0.1.14"}
   clojurewerkz/money   {:mvn/version "1.10.0"}
   org.clojure/data.csv {:mvn/version "1.0.1"}
-  toml/toml            {:mvn/version "0.1.4"}
-  table/table          {:mvn/version "0.5.0"}}}
+  toml/toml            {:mvn/version "0.1.4"}}}
