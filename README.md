@@ -2,15 +2,16 @@
 
 हिसाब in Hindi means account.
 
-This is a clj script to parse and create reports from HDFC cc/bank pdf statements.
+This is a clj script to parse and create reports from HDFC cc/bank statements.
 
 ## How to use
 
 Download delimited bank statements from hdfc and generate reports from them using `process` function in `hdfc.*` namspace.
 
 ```
-;; example usage and output
-(hdfc.statement/process "<absolute-path-to-file>.txt")
+;; Example usage and output
+;; This requires the 'delimited' version of a bank statement.
+(hdfc.bank-statement/process "<absolute-path-to-file>.txt")
 
 {:totals
  {:withdrawls 125067.0,
@@ -34,7 +35,8 @@ Download delimited bank statements from hdfc and generate reports from them usin
 For credit card statements, go to the `credit-card-statement` namespace and use the `process` fn.
 
 ```
-;; example usage and output
+;; Example usage and output
+;; This requires a PDF version of the credit card statement.
 (hdfc.credit-card-statement/process "<absolute-path-to-file>.pdf")
 
 {:total-credits "INR60,016.00",
