@@ -2,15 +2,16 @@
 
 हिसाब in Hindi means account.
 
-This is a clj script to parse and create reports from my cc pdf statements. So far.
+This is a clj script to parse and create reports from HDFC cc/bank pdf statements.
 
 ## How to use
 
-Download delimited bank statements from hdfc and generate reports from them using `process` function in `statement` namspace.
+Download delimited bank statements from hdfc and generate reports from them using `process` function in `hdfc.*` namspace.
 
 ```
 ;; example usage and output
-(statement/process "<absolute-path-to-file>.txt")
+(hdfc.statement/process "<absolute-path-to-file>.txt")
+
 {:totals
  {:withdrawls 125067.0,
   :deposits 6683.0,
@@ -34,7 +35,8 @@ For credit card statements, go to the `credit-card-statement` namespace and use 
 
 ```
 ;; example usage and output
-(credit-card-statement/process "<absolute-path-to-file>.pdf")
+(hdfc.credit-card-statement/process "<absolute-path-to-file>.pdf")
+
 {:total-credits "INR60,016.00",
  :total-debits "INR46,096.63",
  :debit-breakdown
@@ -49,20 +51,23 @@ For credit card statements, go to the `credit-card-statement` namespace and use 
 ### CLI usage
 
 ```
-clj -M -m core bank <abosulte-file-path>
+make hdfc-bank FILE=<absolute-file-path>
 ```
+
 or
+
 ```
-clj -M -m core cc <abosulte-file-path>
+make hdfc-cc FILE=<absolute-file-path>
 ```
 
 to generate a sample config (that can be tweaked),
+
 ```
-clj -M -m core confgen
+# goes under $HOME/hisaab.conf.toml
+make confgen
 ```
 
 ## Future
 
-- add reports for grouped and tagged expenditures
-- add a sqlite database that can be locally stored
-- add monthly comparisons for expenditures based on stored data
+- Add durability for generated reports (database, files etc.)
+- Add monthly comparisons for expenditures based on stored data

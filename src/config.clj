@@ -31,4 +31,6 @@
                                          slurp
                                          (toml/read :keywordize)))]
     (reset! conf data)
-    (reset! conf defaults)))
+    (do
+      (reset! conf defaults)
+      ::defaults-used)))

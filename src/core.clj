@@ -4,16 +4,22 @@
             [hdfc.credit-card-statement :as cc]
             [hdfc.bank-statement :as bs]))
 
+(defn load-config! []
+  (when (= (config/get!)
+           :config/defaults-used)
+    (println "Parsing config file *failed*, using defaults...\n")))
+
 (defn cli-parse [[type filename & _rest]]
   (case type
     "confgen" (do (config/put!)
                   (print "Successfully wrote config to:" config/file))
-    "cc"      (do (pp/pprint (cc/process filename))
+    "cc"      (do (load-config!)
+                  (pp/pprint (cc/process filename))
                   (print "\nFinished generating the HDFC Credit Card Report!"))
-    "bank"    (do (pp/pprint (bs/process filename))
+    "bank"    (do (load-config!)
+                  (pp/pprint (bs/process filename))
                   (print "\nFinished generating the HDFC Bank Statement Report!"))
     (print "Invalid statement type!")))
 
 (defn -main [& args]
-  (config/get!)
   (cli-parse args))
