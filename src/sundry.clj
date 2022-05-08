@@ -47,3 +47,21 @@
   [f]
   (with-open [rd (io/reader (io/file f))]
     (doall (csv/read-csv rd))))
+
+(defmacro nil-on-exceptions
+  "Catch any Exception from the body and return nil."
+  [& body]
+  `(try
+     ~@body
+     (catch Exception e#
+       nil)))
+
+(defn parse-rounded-float
+  "Parse string as float and then round it.
+  Return nil if unparseable."
+  [s]
+  (nil-on-exceptions
+   (-> s
+       Float/parseFloat
+       Math/round
+       int)))
