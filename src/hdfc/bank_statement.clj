@@ -2,8 +2,7 @@
   (:require [clojure.set :as cset]
             [clojure.string :as s]
             [config :refer [conf]]
-            [sundry :as e]
-            [table.core :as t]))
+            [sundry :as e]))
 
 (def header-keys
   {"Date"            :date
