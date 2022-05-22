@@ -4,52 +4,76 @@
             [clojurewerkz.money.currencies :as mc]
             [clojurewerkz.money.format :as mf]
             [config :refer [conf]]
-            [pdfboxing.text :as text]))
+            [java-time :as time]
+            [pdfboxing.text :as text]
+            [sundry :as e]))
 
 (defn description->tag [description]
   (let [selected-tag (->> (get-in @conf [:bank-statement :tags])
                           (filter (fn [[tag descs]]
-                                    (some #(s/includes? description %) descs)))
+                                    (some #(s/includes? (s/upper-case description) %) descs)))
                           ffirst)]
     (or selected-tag :untagged)))
 
+(defn sanitize-date
+  "Works iff date has dd, mm and yyyy separated by slash"
+  [date]
+  (let [len              (count date)
+        valid-date-chars 10]
+    (subs date (- len valid-date-chars) len)))
+
+(defn handle-null-at-row-beg [fields]
+  (drop-while #(= "null" %) fields))
+
 (defn row->map [credit? row]
   (let [fields             (->> (s/split row #" ")
-                                (remove #(= % "")))
+                                (remove #(= % ""))
+                                handle-null-at-row-beg)
         [date & remaining] fields
-
+        sanitized-date     (sanitize-date date)
         remaining          (if credit?
                              (drop-last remaining)
                              remaining)
         amount             (ma/parse (str "INR" (s/replace (last remaining) #"," "")))
         description        (s/join " " (drop-last remaining))]
-    {:date        date
+    {:date        (e/parse-ddmmyyyy sanitized-date)
      :amount      amount
      :description description
      :tag         (description->tag description)}))
 
 (defn gen-statement [credits debits]
-  {:total-credits   (mf/format (reduce ma/plus (map :amount credits)))
-   :total-debits    (mf/format (reduce ma/plus (map :amount debits)))
-   :debit-breakdown (->> (group-by :tag debits)
-                         (map (fn [[tag expenses]]
-                                [tag (mf/format (reduce ma/plus
-                                                        (map :amount expenses)))]))
-                         (into {}))})
+  (let [[from to] (e/min-max-dates (concat credits debits))]
+    {:from            from
+     :to              to
+     :total-credits   (mf/format (reduce ma/plus (map :amount credits)))
+     :total-debits    (mf/format (reduce ma/plus (map :amount debits)))
+     :debit-breakdown (->> (group-by :tag debits)
+                           (map (fn [[tag expenses]]
+                                  [tag (mf/format (reduce ma/plus
+                                                          (map :amount expenses)))]))
+                           (into {}))}))
+
+(def drop-points (fn [page] (take-while (partial not= "Reward Points Summary") page)))
+(def drop-unnecessary-header-rows (partial drop 7))
+(def drop-unnecessary-footer-rows (partial drop-last 5))
 
 (defn process [filename]
-  (let [file-content   (-> filename
-                           text/extract
-                           (s/split #"(Domestic|International) Transactions"))
-        rows           (->> file-content
-                            (drop 1)
-                            (map #(s/split % #"\n"))
-                            (drop-last))
-        value-rows     (reduce (fn [coll page]
-                                 (concat coll (subvec page 7 (-  (count page) 5))))
-                               nil rows)
-        {debits  false
-         credits true} (group-by #(s/ends-with? % "Cr") value-rows)
-        credit-maps    (map (partial row->map true) credits)
-        debit-maps     (map (partial row->map false) debits)]
+  (let [file-content                (-> filename
+                                        text/extract
+                                        (s/split #"(Domestic|International) Transactions"))
+        pages                       (->> file-content
+                                         (drop 1)
+                                         (map #(s/split % #"\n")))
+        butlast-page-rows           (mapcat #(->> %
+                                                  drop-unnecessary-footer-rows
+                                                  drop-unnecessary-header-rows)
+                                            (butlast pages))
+        last-page-rows              (->> pages
+                                         last
+                                         drop-points
+                                         drop-unnecessary-header-rows)
+        sanitized-rows              (concat butlast-page-rows last-page-rows)
+        {debits false credits true} (group-by #(s/ends-with? % "Cr") sanitized-rows)
+        credit-maps                 (map (partial row->map true) credits)
+        debit-maps                  (map (partial row->map false) debits)]
     (gen-statement credit-maps debit-maps)))

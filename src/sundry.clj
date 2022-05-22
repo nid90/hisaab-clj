@@ -1,7 +1,8 @@
 (ns sundry
   (:require [clojure.data.csv :as csv]
             [clojure.java.io :as io]
-            [clojure.string :as s]))
+            [clojure.string :as s]
+            [java-time :as time]))
 
 (defn cram-at
   "For a given vector,
@@ -65,3 +66,28 @@
        Float/parseFloat
        Math/round
        int)))
+
+(defn parse-ddmmyyyy
+  [date]
+  (time/local-date "dd/MM/yyyy" date))
+
+(defn parse-ddmmyy
+  [date]
+  (time/local-date "dd/MM/yy" date))
+
+(defn max-date
+  [dates]
+  (apply time/max dates))
+
+(defn min-date
+  [dates]
+  (apply time/min dates))
+
+(defn min-max-dates
+  "For a list of maps containing a :date key,
+  Return a tuple of [min_date, max_date] as strings."
+  [row-maps]
+  (->> row-maps
+       (map :date)
+       ((juxt min-date max-date))
+       (map str)))

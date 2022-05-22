@@ -54,8 +54,18 @@
         (update :closing-balance e/parse-rounded-float))
    row-maps))
 
+(defn datefy [row-maps]
+  (map
+   #(-> %
+        (update :date e/parse-ddmmyy)
+        (update :value-date e/parse-ddmmyy))
+   row-maps))
+
+(defn case-insensitive-regex [matcher]
+  (re-pattern (str "(?i)" matcher)))
+
 (defn matches-narration? [row matcher]
-  (boolean (re-find (re-pattern matcher)
+  (boolean (re-find (case-insensitive-regex matcher)
                     (get row :narration))))
 
 (defn matching-narrations [row matchers]
@@ -136,7 +146,8 @@
                           fetch!
                           adjust-narrations
                           header->row
-                          numeralize)
+                          numeralize
+                          datefy)
         totals        (-> data
                           filter-debits
                           filter-credits
@@ -144,6 +155,5 @@
         tagged-totals (-> data
                           tagged-data
                           tagged-totals)
-        from          (-> data first :value-date)
-        to            (-> data last :value-date)]
+        [from to]     (e/min-max-dates data)]
     {:from from :to to :totals totals :tagged-totals tagged-totals}))
