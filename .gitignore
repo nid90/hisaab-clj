@@ -1,3 +1,6 @@
 .nrepl-port
 .cpcache
 .idea/*
+*.db
+*.pdf
+*.txt

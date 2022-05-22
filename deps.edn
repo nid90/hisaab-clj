@@ -1,5 +1,8 @@
 {:deps
- {pdfboxing/pdfboxing  {:mvn/version "0.1.14"}
-  clojurewerkz/money   {:mvn/version "1.10.0"}
-  org.clojure/data.csv {:mvn/version "1.0.1"}
-  toml/toml            {:mvn/version "0.1.4"}}}
+ {pdfboxing/pdfboxing                 {:mvn/version "0.1.14"}
+  clojurewerkz/money                  {:mvn/version "1.10.0"}
+  org.clojure/data.csv                {:mvn/version "1.0.1"}
+  clojure.java-time/clojure.java-time {:mvn/version "0.3.3"}
+  com.github.seancorfield/next.jdbc   {:mvn/version "1.2.780"}
+  org.xerial/sqlite-jdbc              {:mvn/version "3.36.0.3"}
+  toml/toml                           {:mvn/version "0.1.4"}}}
