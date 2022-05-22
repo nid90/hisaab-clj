@@ -143,5 +143,7 @@
                           gen-statement)
         tagged-totals (-> data
                           tagged-data
-                          tagged-totals)]
-    {:totals totals :tagged-totals tagged-totals}))
+                          tagged-totals)
+        from          (-> data first :value-date)
+        to            (-> data last :value-date)]
+    {:from from :to to :totals totals :tagged-totals tagged-totals}))
