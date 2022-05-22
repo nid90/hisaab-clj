@@ -2,7 +2,7 @@
   (:require [clojure.set :as cset]
             [clojure.string :as s]
             [config :refer [conf]]
-            [sundry :as e]))
+            [sundry :refer :all]))
 
 (def header-keys
   {"Date"            :date
@@ -17,7 +17,7 @@
 
 (defn fetch! [f]
   (->> f
-       (e/read-csv)
+       (read-csv)
        (rest)
        (map #(map s/trim %))))
 
@@ -30,8 +30,8 @@
       (let [narration     (subvec row-vec narration-idx (+ 1 narration-idx diff))
             narration-str (s/join narration)]
         (-> row
-            (e/rem-subvec narration)
-            (e/cram-at narration-str narration-idx)))
+            (rem-subvec narration)
+            (cram-at narration-str narration-idx)))
       row-vec)))
 
 (defn adjust-narrations
@@ -49,16 +49,16 @@
 (defn numeralize [row-maps]
   (map
    #(-> %
-        (update :debit-amount e/parse-rounded-float)
-        (update :credit-amount e/parse-rounded-float)
-        (update :closing-balance e/parse-rounded-float))
+        (update :debit-amount parse-rounded-float)
+        (update :credit-amount parse-rounded-float)
+        (update :closing-balance parse-rounded-float))
    row-maps))
 
 (defn datefy [row-maps]
   (map
    #(-> %
-        (update :date e/parse-ddmmyy)
-        (update :value-date e/parse-ddmmyy))
+        (update :date parse-ddmmyy)
+        (update :value-date parse-ddmmyy))
    row-maps))
 
 (defn case-insensitive-regex [matcher]
@@ -125,7 +125,7 @@
                           matched-data (filter-narrations data matchers)]
                       (-> m
                           (assoc-in [:grouped-data tag] matched-data)
-                          (assoc :data (e/rem-subvec data matched-data)))))
+                          (assoc :data (rem-subvec data matched-data)))))
                   {:grouped-data {} :data initial-data})
        (:grouped-data)))
 
@@ -155,5 +155,5 @@
         tagged-totals (-> data
                           tagged-data
                           tagged-totals)
-        [from to]     (e/min-max-dates data)]
+        [from to]     (min-max-dates data)]
     {:from from :to to :totals totals :tagged-totals tagged-totals}))

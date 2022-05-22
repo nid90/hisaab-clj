@@ -6,7 +6,7 @@
             [config :refer [conf]]
             [java-time :as time]
             [pdfboxing.text :as text]
-            [sundry :as e]))
+            [sundry :refer :all]))
 
 (defn description->tag [description]
   (let [selected-tag (->> (get-in @conf [:bank-statement :tags])
@@ -36,13 +36,13 @@
                              remaining)
         amount             (ma/parse (str "INR" (s/replace (last remaining) #"," "")))
         description        (s/join " " (drop-last remaining))]
-    {:date        (e/parse-ddmmyyyy sanitized-date)
+    {:date        (parse-ddmmyyyy sanitized-date)
      :amount      amount
      :description description
      :tag         (description->tag description)}))
 
 (defn gen-statement [credits debits]
-  (let [[from to] (e/min-max-dates (concat credits debits))]
+  (let [[from to] (min-max-dates (concat credits debits))]
     {:from            from
      :to              to
      :total-credits   (mf/format (reduce ma/plus (map :amount credits)))
