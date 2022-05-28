@@ -22,13 +22,17 @@
         valid-date-chars 10]
     (subs date (- len valid-date-chars) len)))
 
+(defn clobber-until-date-slash [fields]
+  (drop-while #(not (boolean (re-find #"/" %))) fields))
+
 (defn handle-null-at-row-beg [fields]
   (drop-while #(= "null" %) fields))
 
 (defn row->map [credit? row]
   (let [fields             (->> (s/split row #" ")
                                 (remove #(= % ""))
-                                handle-null-at-row-beg)
+                                handle-null-at-row-beg
+                                clobber-until-date-slash)
         [date & remaining] fields
         sanitized-date     (sanitize-date date)
         remaining          (if credit?
