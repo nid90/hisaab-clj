@@ -6,3 +6,6 @@ hdfc-cc:
 
 hdfc-bank:
 	clj -M -m core bank ${FILE}
+
+web:
+	clj -M -m core web

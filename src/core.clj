@@ -2,7 +2,8 @@
   (:require [config]
             [clojure.pprint :as pp]
             [hdfc.credit-card-statement :as cc]
-            [hdfc.bank-statement :as bs]))
+            [hdfc.bank-statement :as bs]
+            [http.server :as server]))
 
 (defn load-config! []
   (when (= (config/get!)
@@ -19,6 +20,9 @@
     "bank"    (do (load-config!)
                   (pp/pprint (bs/process filename))
                   (print "\nFinished generating the HDFC Bank Statement Report!"))
+    "web"     (do (load-config!)
+                  (println "Starting web server")
+                  (server/start!))
     (print "Invalid statement type!")))
 
 (defn -main [& args]
