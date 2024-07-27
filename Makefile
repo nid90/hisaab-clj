@@ -6,3 +6,6 @@ hdfc-cc:
 
 hdfc-bank:
 	clj -M -m core bank ${FILE}
+
+copy-toml:
+	scp ~/hisaab.conf.toml ${DEST}:~
