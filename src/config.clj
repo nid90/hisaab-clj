@@ -23,13 +23,8 @@
     {:debit  ["CLEARING" "LIC" "NEW FD", "CBDT", "BAJAJFINANCE"]
      :credit ["FD PREMAT", "MUTUAL FUND", "MF", "NILENSO", "BDCP", "AUTO_REDE"]}}})
 
-(defn put! []
-  (spit file (toml/write defaults)))
-
 (defn get! []
-  (if-let [data (e/nil-on-exceptions (-> file
-                                         slurp
-                                         (toml/read :keywordize)))]
+  (if-let [data (e/nil-on-exceptions (-> file slurp (toml/read :keywordize)))]
     (reset! conf data)
     (do
       (reset! conf defaults)

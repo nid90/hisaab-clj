@@ -4,3 +4,7 @@
 *.db
 *.pdf
 *.txt
+.clj-kondo/
+.lsp/
+resources/*
+!resources/hisaab.conf.toml

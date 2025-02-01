@@ -2,7 +2,8 @@
   (:require [clojure.set :as cset]
             [clojure.string :as s]
             [config :refer [conf]]
-            [sundry :refer :all]))
+            [sundry :refer :all]
+            [clojure.pprint :refer [print-table]]))
 
 (def header-keys
   {"Date"            :date
@@ -156,4 +157,23 @@
                           tagged-data
                           tagged-totals)
         [from to]     (min-max-dates data)]
+    (def *dbg (tagged-data data))
     {:from from :to to :totals totals :tagged-totals tagged-totals}))
+
+(defn format-statement [data]
+  (let [summary-keys [:withdrawls :deposits :expenditure :closing-balance]
+        period {:period (str (:from data) " to " (:to data))}
+        totals (-> (:totals data) (select-keys summary-keys))
+        summary (merge period totals)
+        tags (:tagged-totals data)
+        rows (for [[tag {:keys [debit credit]}] tags]
+               {:category (name tag)
+                :debit (or debit 0)
+                :credit (or credit 0)
+                :net (- (or credit 0) (or debit 0))})]
+    (println)
+    (print "==> Summary")
+    (print-table (cons :period summary-keys) [summary])
+    (println)
+    (print "==> Breakdown")
+    (print-table (keys (first rows)) (sort-by :category rows))))

@@ -6,7 +6,8 @@
             [config :refer [conf]]
             [java-time :as time]
             [pdfboxing.text :as text]
-            [sundry :refer :all]))
+            [sundry :refer :all]
+            [clojure.pprint :refer [print-table]]))
 
 (defn description->tag [description]
   (let [selected-tag (->> (get-in @conf [:bank-statement :tags])
@@ -80,4 +81,18 @@
         {debits false credits true} (group-by #(s/ends-with? % "Cr") sanitized-rows)
         credit-maps                 (map (partial row->map true) credits)
         debit-maps                  (map (partial row->map false) debits)]
+    (def *dbg debit-maps)
     (gen-statement credit-maps debit-maps)))
+
+(defn format-statement [data]
+  (let [summary {:period (str (:from data) " to " (:to data))
+                :total-credits (:total-credits data)
+                :total-debits (:total-debits data)}
+        breakdown (for [[category amount] (:debit-breakdown data)]
+                    {:category (name category) :amount amount})]
+    (println)
+    (print "==> Summary")
+    (print-table (keys summary) [summary])
+    (println)
+    (print "==> Expenditure Breakdown")
+    (print-table (keys (first breakdown)) breakdown)))

@@ -1,24 +1,23 @@
 (ns core
   (:require [config]
-            [clojure.pprint :as pp]
             [hdfc.credit-card-statement :as cc]
             [hdfc.bank-statement :as bs]))
 
 (defn load-config! []
   (when (= (config/get!)
            :config/defaults-used)
-    (println "Parsing config file *failed*, using defaults...\n")))
+    (println "Parsing config file *failed*, using defaults..")))
 
 (defn cli-parse [[type filename & _rest]]
   (case type
-    "confgen" (do (config/put!)
-                  (print "Successfully wrote config to:" config/file))
     "cc"      (do (load-config!)
-                  (pp/pprint (cc/process filename))
-                  (print "\nFinished generating the HDFC Credit Card Report!"))
+                  (-> filename cc/process cc/format-statement)
+                  (println)
+                  (print "Finished generating the HDFC Credit Card Report!"))
     "bank"    (do (load-config!)
-                  (pp/pprint (bs/process filename))
-                  (print "\nFinished generating the HDFC Bank Statement Report!"))
+                  (-> filename bs/process bs/format-statement)
+                  (println)
+                  (print "Finished generating the HDFC Bank Statement Report!"))
     (print "Invalid statement type!")))
 
 (defn -main [& args]

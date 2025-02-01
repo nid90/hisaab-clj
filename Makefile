@@ -1,5 +1,5 @@
 confgen:
-	clj -M -m core confgen
+	ln -s "$(CURDIR)/resources/hisaab.conf.toml" ~/hisaab.conf.toml
 
 hdfc-cc:
 	clj -M -m core cc ${FILE}
