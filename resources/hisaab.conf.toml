@@ -35,7 +35,8 @@ groceries = [
 "GEDDIT",
 "COSMIX",
 "AKSHAYAKALPA",
-"INSTAMART"
+"INSTAMART",
+"BLINKIT"
 ]
 
 fnb = [
@@ -87,7 +88,8 @@ fnb = [
 "SWIGGY IN BANGALORE",
 "BACKER DEUTSCHLAND",
 "SWIGGY LIMITED",
-"BISTRO"
+"BISTRO",
+"CHOTA SWAAD"
 ]
 
 donations = [
@@ -101,6 +103,11 @@ donations = [
 tax = [
 "CBDT",
 "ITDTAX"
+]
+
+whitecollarservices = [
+"FINMOJO",
+"PARIVARTHAN"
 ]
 
 subscriptions = [
@@ -159,7 +166,8 @@ investments = [
 "MUTUAL FUND",
 "50200021339924",
 "SHRIRAM FINANCE",
-"TATA CAP HSG NCD"
+"TATA CAP HSG NCD",
+"HDFC SECURITIES"
 ]
 
 household = [
@@ -194,7 +202,9 @@ salary-reimbursement = [
 "USD2000",
 "USD 2000",
 "USD315",
-"USD1685"
+"USD1685",
+"USD105.0",
+"INW"
 ]
 
 medicines = [
@@ -239,7 +249,8 @@ shopping = [
 "MAN MATTERS",
 "ANGRAKHAA",
 "MINIMALIST",
-"DAILYOBJECTS"
+"DAILYOBJECTS",
+"SAPNA"
 ]
 
 credit-card = [
@@ -263,7 +274,9 @@ travel = [
 "VFSGLOBAL",
 "INDIAN RAILWAY",
 "AIR INDIA",
-"GARDENIA"
+"GARDENIA",
+"THOMAS COOK",
+"AKSHAY GUPTA-NIYO8553427344"
 ]
 
 fitness = [
@@ -335,5 +348,6 @@ credit = [
 "PRIN AND INT AUTO_REDEEM",
 "INT. AUTO_REDEMPTION",
 "SHRIRAM FINANCE",
-"TATA CAP HSG NCD"
+"TATA CAP HSG NCD",
+"INW"
 ]
