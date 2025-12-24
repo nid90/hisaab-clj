@@ -255,7 +255,8 @@ shopping = [
 
 credit-card = [
 "CC",
-"CRED"
+"CRED",
+"IB BILLPAY DR-HDFC4U"
 ]
 
 cash = [
